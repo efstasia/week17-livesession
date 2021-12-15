@@ -34,7 +34,7 @@ const Company = mongoose.model('Company', {
 
 if (process.env.RESET_DB) {
   const seedDatabase = async () => {
-    // the seed isn't necessary when creating a new database
+    // the seed isn't necessary when creating a new database. seed it once and then only run npm run dev
     await Company.deleteMany({});
 
     // loop through all of the companies in our json file
@@ -47,7 +47,7 @@ if (process.env.RESET_DB) {
   seedDatabase();
 }
 
-// // NEW MODEL - pascal case and singular - first argument is the name of the model, second argument is an object about the user, tell then what kind of data you're expecting in the objevt (number, string boolean etc)
+// // NEW MODEL - pascal case and singular - first argument is the name of the model, second argument is an object about the user, tell then what kind of data you're expecting in the object (number, string boolean etc)
 // const User = mongoose.model('User', {
 //   name: String, // could also be mongoose.types.String
 //   age: Number,
@@ -84,6 +84,50 @@ if (process.env.RESET_DB) {
 app.get('/', (req, res) => {
   res.send('Hello world');
 });
+
+// get all the companies
+app.get('/companies', async (req, res) => {
+  // res.json(techFundings); this only works for getting the data from the json file and NOT the database
+  console.log(req.query);
+
+  let companies = await Company.find(req.query).limit(10); // you put what you wanna find inside the curly brackets, this automatically filters our list with whatever we add, like companies?fundingStage=Seed. the limit() limits our search result to how many we add in the parentheses
+  //.find() gets all the companies, but can be used to filter when adding something in the parentheses. the find() will take some time, so we have to make sure it waits with async/await. wait for the find action to be finished BEFORE running the res.json(companies to show all companies that match
+
+  // gt = greater than, lt = lower than
+  if (req.query.FundingAmountUSD) {
+    // if it's that query (fundingAmountUSD)
+    const companiesByAmount = await Company.find().gt(
+      'fundingAmountUSD',
+      req.query.FundingAmountUSD
+    ); // this shows the companies with funding GREATER THAN what we add in the url
+    companies = companiesByAmount;
+  }
+
+  res.json(companies);
+});
+
+// get one company based on iD
+app.get('/companies/id/:id', async (req, res) => {
+  // this will only be triggered IF we have an ID, otherwise we'll just see the companies
+  const { id } = req.params;
+
+  try {
+    const companyById = await Company.findById(id);
+    if (companyById) {
+      res.json(companyById);
+    } else {
+      res.status(404).json({ error: 'Company not found' });
+    }
+  } catch (err) {
+    res.status(400).json({ error: 'invalid id' });
+  }
+});
+
+// alternative to findById = findOne()
+
+// app.post('/companies', {req, res} => {
+//   const newCompany = new Company({info})
+// })
 
 // Start the server
 app.listen(port, () => {
